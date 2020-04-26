@@ -13,8 +13,6 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
 
-
-###FUNCTIONS####
 def readConfig():
     try:
         config = configparser.ConfigParser()
@@ -25,11 +23,11 @@ def readConfig():
         log.info("Config parsed.")
         return config
 
-def connectToDb():
+def connectToDb(dbDriver, dbServer, dbDB):
     try:
-        conn = pyodbc.connect('Driver={SQL Server};'
-                              'Server=MANUF-MITCH-NB\SQLEXPRESS;'
-                              'Database=testdb;'
+        conn = pyodbc.connect('Driver=' + dbDriver + ';'
+                              'Server='+ dbServer +';'
+                              'Database=' + dbDB + ';'
                               'Trusted_Connection=yes;')
     except:
         log.exception('DB connection error.')
@@ -76,62 +74,21 @@ def readTags(plc, tagName):
         log.info("Tag: '%s' read OK.", tagName)
         return tagValue
 
-def createUI():
-    def startBtnClick():
-        statusLbl1.configure(text="Logging begins in 4 seconds.")
-        time.sleep(5)
-        window.destroy()
-
-
-    window = Tk()
-    window.title("Logix Log")
-
-    startBtn = Button(window, text="Accept", command = startBtnClick, width = 20)
-    startBtn.grid(column=0, row=3)
-
-    statusLbl1 = Label(window, text="Select tags and click Accept.", font=("Arial Bold", 10))
-    statusLbl1.grid(column=0, row=1)
-
-    tagListFrame = Frame(window)
-    tagListFrame.grid(column=0, row=2, columnspan = 3)
-
-    tagList = Listbox(tagListFrame)
-    tagList.pack(side = 'left', fill = 'y')
-    tagList.insert(1,'tag1')
-    tagList.insert(2,'tag2')
-    tagList.insert(2,'tag2')
-    tagList.insert(2,'tag2')
-    tagList.insert(2,'tag2')
-    tagList.insert(2,'tag2')
-    tagList.insert(2,'tag2')
-    tagList.insert(2,'tag2')
-    tagList.insert(2,'tag2')
-    tagList.insert(2,'tag2')
-    tagList.insert(2,'tag2')
-    tagList.insert(2,'tag2')
-    tagList.insert(3,'tag3')
-    tagList.insert(4,'tag4')
-    tagList.insert(5,'tag5')
-
-    scrollbar = Scrollbar(tagListFrame, orient="vertical", command=tagList.yview)
-    scrollbar.pack(side = "right", fill = "y")
-
-    window.geometry('400x400')
-    window.mainloop()
-
-###MAIN###
 def main():
     config = readConfig()
     ipAddress = config['PLCLOG']['ip']
     tagList = config['PLCLOG']['taglist'].split(',')
-
-    dbConn = connectToDb()
-    myPlc = connectToPlc(ipAddress)
+    dbDriver = config['DBLOG']['driver']
+    dbServer = config['DBLOG']['server']
+    dbDB = config['DBLOG']['database']
     samplePeriod = int(config['PLCLOG']['period']) #sample period in seconds
     heartbeatPeriod = int(config['DEFAULT']['heartbeat']) 
 
+    dbConn = connectToDb(dbDriver, dbServer, dbDB)
+    myPlc = connectToPlc(ipAddress)
+
     schedule.every(samplePeriod).seconds.do(readAndLog, plc = myPlc, conn = dbConn, tagList = tagList)
-    schedule.every(heartbeatPeriod).seconds.do(plcHeart, plc = myPlc)
+    #schedule.every(heartbeatPeriod).seconds.do(plcHeart, plc = myPlc)
 
     while True:
         try:
